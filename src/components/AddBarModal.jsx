@@ -9,31 +9,42 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
   const [saving, setSaving] = useState(false)
   const [coords, setCoords] = useState(initialCoords || null)
   const [locating, setLocating] = useState(false)
+  const [searchAddr, setSearchAddr] = useState('')
+  const [searchError, setSearchError] = useState('')
   const fileRef = useRef()
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
-  function useMyLocation() {
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
-    if (!navigator.geolocation) return alert('Tu navegador no soporta geolocalización')
-    if (isSafari) {
-      alert('Safari bloquea la geolocalización en esta app. Usa Chrome o toca el mapa para marcar la ubicación manualmente.')
-      return
-    }
+  async function searchAddress() {
+    if (!searchAddr.trim()) return
     setLocating(true)
+    setSearchError('')
+    try {
+      const q = encodeURIComponent(searchAddr + ', España')
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
+        headers: { 'Accept-Language': 'es' }
+      })
+      const data = await res.json()
+      if (data && data.length > 0) {
+        setCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) })
+        setSearchError('')
+      } else {
+        setSearchError('No encontré esa dirección. Prueba con más detalle o toca el mapa.')
+      }
+    } catch(e) {
+      setSearchError('Error al buscar. Toca el mapa para marcar manualmente.')
+    } finally {
+      setLocating(false)
+    }
+  }
+
+  function useMyLocation() {
+    if (!navigator.geolocation) { setSearchError('Tu navegador no soporta geolocalización.'); return }
+    setLocating(true)
+    setSearchError('')
     navigator.geolocation.getCurrentPosition(
-      pos => {
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-        setLocating(false)
-      },
-      err => {
-        if (err.code === 1) {
-          alert('Has bloqueado el permiso de ubicación. Actívalo en la configuración del navegador.')
-        } else {
-          alert('No se pudo obtener tu ubicación. Toca el mapa para marcarla manualmente.')
-        }
-        setLocating(false)
-      },
+      pos => { setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setLocating(false) },
+      () => { setSearchError('No se pudo obtener tu ubicación. Busca la dirección o toca el mapa.'); setLocating(false) },
       { enableHighAccuracy: true, timeout: 8000 }
     )
   }
@@ -87,19 +98,45 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
 
         <div className="form-group">
           <label className="form-label" style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-            <span>Ubicación en el mapa {coords && <span style={{ fontSize:10, color:'var(--green)', fontWeight:600, background:'var(--green-light)', padding:'2px 7px', borderRadius:8, marginLeft:6 }}>✓ Marcada</span>}</span>
+            Ubicación
+            {coords && <span style={{ fontSize:10, color:'var(--green)', fontWeight:600, background:'var(--green-light)', padding:'2px 7px', borderRadius:8 }}>✓ Marcada</span>}
           </label>
 
-          {/* Geolocation button */}
+          {/* Address search */}
+          <div style={{ display:'flex', gap:6, marginBottom:8 }}>
+            <input
+              className="form-input"
+              placeholder="Busca por dirección o nombre del bar..."
+              value={searchAddr}
+              onChange={e => setSearchAddr(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && searchAddress()}
+              style={{ flex:1 }}
+            />
+            <button
+              onClick={searchAddress}
+              disabled={locating || !searchAddr.trim()}
+              style={{ background:'var(--ink)', color:'white', border:'none', borderRadius:'var(--radius)', padding:'0 12px', fontSize:13, cursor:'pointer', fontWeight:600, flexShrink:0 }}
+            >
+              {locating ? '...' : '🔍'}
+            </button>
+          </div>
+
+          {/* My location button */}
           <button
             onClick={useMyLocation}
             disabled={locating}
-            style={{ width:'100%', marginBottom:8, padding:'9px 12px', background:'var(--purple-light)', color:'var(--purple)', border:'1px solid var(--purple)', borderRadius:'var(--radius)', fontSize:13, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, fontFamily:'var(--font-body)' }}
+            style={{ width:'100%', marginBottom:8, padding:'8px 12px', background:'var(--purple-light)', color:'var(--purple)', border:'1px solid var(--purple)', borderRadius:'var(--radius)', fontSize:12, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, fontFamily:'var(--font-body)' }}
           >
             {locating ? '📡 Obteniendo ubicación...' : '📍 Usar mi ubicación actual'}
           </button>
 
-          <div style={{ fontSize:11, color:'var(--gray-400)', marginBottom:8, textAlign:'center' }}>— o toca el mapa para marcarla —</div>
+          {searchError && (
+            <div style={{ fontSize:11, color:'var(--red)', marginBottom:8, padding:'6px 10px', background:'var(--red-light)', borderRadius:8 }}>
+              {searchError}
+            </div>
+          )}
+
+          <div style={{ fontSize:11, color:'var(--gray-400)', marginBottom:6, textAlign:'center' }}>— o toca el mapa directamente —</div>
 
           <MiniMapa onLocationPick={setCoords} initialCoords={coords} />
         </div>
