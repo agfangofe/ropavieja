@@ -87,6 +87,16 @@ export function useBares(userId) {
       }
     }
     await fetchBares()
+
+    // Notify all other users about new bar
+    try {
+      const { data: allProfiles } = await supabase.from('profiles').select('id').neq('id', userId)
+      if (allProfiles && allProfiles.length > 0) {
+        const { data: newBar } = await supabase.from('bares').select('id').eq('added_by', userId).order('created_at', { ascending: false }).limit(1).single()
+        const notifs = allProfiles.map(p => ({ user_id: p.id, from_user_id: userId, type: 'new_bar', bar_id: newBar?.id || null }))
+        await supabase.from('notificaciones').insert(notifs)
+      }
+    } catch(e) { console.error('notif error', e) }
   }
 
   async function toggleFav(barId, currentlyFav) {
