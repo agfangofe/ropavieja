@@ -1,83 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
-import L from 'leaflet'
-
-function miniPinIcon() {
-  return L.divIcon({
-    className: '',
-    html: `<div style="display:flex;flex-direction:column;align-items:center;">
-      <div style="width:32px;height:32px;border-radius:50%;background:#D94F3D;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 3px 10px rgba(217,79,61,0.5);">📍</div>
-      <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:8px solid #D94F3D;margin-top:-1px;"></div>
-    </div>`,
-    iconSize: [32, 42], iconAnchor: [16, 42], popupAnchor: [0, -44],
-  })
-}
-
-function MiniMapa({ onLocationPick, initialCoords }) {
-  const containerRef = useRef(null)
-  const mapRef = useRef(null)
-  const markerRef = useRef(null)
-
-  useEffect(() => {
-    if (!containerRef.current || mapRef.current) return
-
-    const center = initialCoords
-      ? [initialCoords.lat, initialCoords.lng]
-      : [40.4168, -3.7038]
-
-    const map = L.map(containerRef.current, {
-      center,
-      zoom: initialCoords ? 16 : 15,
-      zoomControl: true,
-    })
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '© OpenStreetMap © CARTO',
-      subdomains: 'abcd',
-      maxZoom: 19,
-    }).addTo(map)
-
-    // If we already have coords, show marker
-    if (initialCoords) {
-      const m = L.marker([initialCoords.lat, initialCoords.lng], {
-        icon: miniPinIcon(), draggable: true,
-      }).addTo(map)
-      m.on('dragend', ev => {
-        const p = ev.target.getLatLng()
-        onLocationPick({ lat: p.lat, lng: p.lng })
-      })
-      markerRef.current = m
-    }
-
-    map.on('click', (e) => {
-      const { lat, lng } = e.latlng
-      if (markerRef.current) markerRef.current.remove()
-      const m = L.marker([lat, lng], { icon: miniPinIcon(), draggable: true }).addTo(map)
-      m.on('dragend', ev => {
-        const p = ev.target.getLatLng()
-        onLocationPick({ lat: p.lat, lng: p.lng })
-      })
-      markerRef.current = m
-      onLocationPick({ lat, lng })
-    })
-
-    setTimeout(() => map.invalidateSize(), 100)
-    mapRef.current = map
-
-    return () => { map.remove(); mapRef.current = null }
-  }, [])
-
-  return (
-    <div style={{ position: 'relative' }}>
-      <div
-        ref={containerRef}
-        style={{ width: '100%', height: 180, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(26,25,22,0.15)' }}
-      />
-      <div style={{ position: 'absolute', top: 6, left: 6, background: 'rgba(26,25,22,0.75)', color: 'white', fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 8, pointerEvents: 'none' }}>
-        Toca para marcar la ubicación
-      </div>
-    </div>
-  )
-}
+import { useState, useRef } from 'react'
+import { MiniMapa } from './MapaReal'
 
 export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords }) {
   const [form, setForm] = useState({ name: '', barrio: '', precio: '', review: '', nota: '' })
@@ -103,13 +25,7 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
     try {
       let image_url = null
       if (imageFile && uploadImage) image_url = await uploadImage(imageFile)
-      await onAdd({
-        ...form,
-        tapa_score: stars * 2,
-        image_url,
-        lat: coords?.lat ?? null,
-        lng: coords?.lng ?? null,
-      })
+      await onAdd({ ...form, tapa_score: stars * 2, image_url, lat: coords?.lat ?? null, lng: coords?.lng ?? null })
       onClose()
     } catch (e) {
       console.error(e)
@@ -162,7 +78,11 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
         <div className="form-group">
           <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             Ubicación en el mapa
-            {coords && <span style={{ fontSize: 10, color: 'var(--green)', fontWeight: 600, background: 'var(--green-light)', padding: '2px 7px', borderRadius: 8 }}>✓ Marcada</span>}
+            {coords && (
+              <span style={{ fontSize: 10, color: '#3A7D5B', fontWeight: 600, background: '#E4F2EB', padding: '2px 7px', borderRadius: 8 }}>
+                ✓ Marcada
+              </span>
+            )}
           </label>
           <MiniMapa onLocationPick={setCoords} initialCoords={initialCoords} />
         </div>

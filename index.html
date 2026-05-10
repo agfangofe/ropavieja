@@ -5,18 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Barrio · ranking de bares</title>
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Instrument+Sans:wght@400;500&display=swap" rel="stylesheet">
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body { background: #F7F6F4; }
-      /* Fix Leaflet z-index conflicts */
-      .leaflet-pane { z-index: 400; }
-      .leaflet-top, .leaflet-bottom { z-index: 500; }
+      .leaflet-container { z-index: 0; }
+      .leaflet-pane { z-index: 400 !important; }
+      .leaflet-top, .leaflet-bottom { z-index: 500 !important; }
+      .leaflet-control { z-index: 500 !important; }
     </style>
   </head>
   <body>
