@@ -18,6 +18,8 @@ export default function HistoriasCarrusel({ historias, userId, onAdd, uploadImag
   const [preview, setPreview] = useState(null)
   const [file, setFile] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [replyText, setReplyText] = useState('')
+  const [sendingReply, setSendingReply] = useState(false)
   const fileRef = useRef()
 
   const byUser = {}
@@ -45,10 +47,26 @@ export default function HistoriasCarrusel({ historias, userId, onAdd, uploadImag
     if (onDelete) onDelete()
   }
 
-  const currentHistoria = viewing?.items?.[viewIdx]
+  async function sendReply(emoji) {
+    const historia = viewing?.items?.[viewIdx]
+    if (!historia) return
+    setSendingReply(true)
+    try {
+      await supabase.from('historia_respuestas').insert({
+        historia_id: historia.id,
+        user_id: userId,
+        text: replyText.trim() || null,
+        emoji: emoji || null,
+      })
+      if (historia.user_id !== userId) {
+        await supabase.from('notificaciones').insert({ user_id: historia.user_id, from_user_id: userId, type: 'mention' })
+      }
+      setReplyText('')
+    } catch(e) { console.error(e) }
+    finally { setSendingReply(false) }
+  }
 
-  function prevHistoria() { setViewIdx(i => Math.max(0, i-1)) }
-  function nextHistoria() { setViewIdx(i => Math.min(viewing.items.length-1, i+1)) }
+  const currentHistoria = viewing?.items?.[viewIdx]
 
   return (
     <>
@@ -57,10 +75,9 @@ export default function HistoriasCarrusel({ historias, userId, onAdd, uploadImag
           <div style={{ width:52, height:52, borderRadius:'50%', border:'2px dashed var(--gray-200)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, color:'var(--gray-400)' }}>+</div>
           <span style={{ fontSize:10, color:'var(--gray-400)', whiteSpace:'nowrap' }}>Tu historia</span>
         </div>
-
         {groups.map((g, i) => (
           <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, flexShrink:0, cursor:'pointer' }} onClick={() => { setViewing(g); setViewIdx(0) }}>
-            <div style={{ padding:2, borderRadius:'50%', background:'linear-gradient(135deg, var(--red), var(--amber))', flexShrink:0 }}>
+            <div style={{ padding:2, borderRadius:'50%', background:'linear-gradient(135deg, var(--red), var(--amber))' }}>
               <div style={{ padding:2, borderRadius:'50%', background:'var(--paper)' }}>
                 <Avatar profile={g.profile} size={48} />
               </div>
@@ -72,17 +89,13 @@ export default function HistoriasCarrusel({ historias, userId, onAdd, uploadImag
         ))}
       </div>
 
-      {/* Viewer */}
       {viewing && currentHistoria && (
         <div style={{ position:'fixed', inset:0, background:'black', zIndex:400, display:'flex', flexDirection:'column' }}>
-          {/* Progress bar */}
           <div style={{ display:'flex', gap:3, padding:'12px 12px 0' }}>
             {viewing.items.map((_, i) => (
               <div key={i} style={{ flex:1, height:3, borderRadius:2, background: i <= viewIdx ? 'white' : 'rgba(255,255,255,0.35)' }} />
             ))}
           </div>
-
-          {/* Header */}
           <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px' }}>
             <Avatar profile={viewing.profile} size={32} />
             <div>
@@ -91,31 +104,47 @@ export default function HistoriasCarrusel({ historias, userId, onAdd, uploadImag
             </div>
             <div style={{ marginLeft:'auto', display:'flex', gap:10, alignItems:'center' }}>
               {currentHistoria.user_id === userId && (
-                <button onClick={() => deleteHistoria(currentHistoria)} style={{ background:'rgba(255,255,255,0.2)', border:'none', color:'white', borderRadius:8, padding:'4px 10px', fontSize:11, cursor:'pointer', fontWeight:600 }}>
-                  🗑️ Eliminar
-                </button>
+                <button onClick={() => deleteHistoria(currentHistoria)} style={{ background:'rgba(255,255,255,0.2)', border:'none', color:'white', borderRadius:8, padding:'4px 10px', fontSize:11, cursor:'pointer', fontWeight:600 }}>🗑️</button>
               )}
               <button onClick={() => setViewing(null)} style={{ background:'none', border:'none', color:'white', fontSize:22, cursor:'pointer', padding:0 }}>✕</button>
             </div>
           </div>
 
-          {/* Image */}
           <div style={{ flex:1, position:'relative', display:'flex', alignItems:'center', justifyContent:'center' }}>
             <img src={currentHistoria.image_url} alt="" style={{ maxWidth:'100%', maxHeight:'100%', objectFit:'contain' }} />
-            {/* Tap areas */}
-            <div style={{ position:'absolute', left:0, top:0, width:'40%', height:'100%' }} onClick={prevHistoria} />
-            <div style={{ position:'absolute', right:0, top:0, width:'40%', height:'100%' }} onClick={nextHistoria} />
+            <div style={{ position:'absolute', left:0, top:0, width:'40%', height:'100%' }} onClick={() => setViewIdx(i => Math.max(0, i-1))} />
+            <div style={{ position:'absolute', right:0, top:0, width:'40%', height:'100%' }} onClick={() => setViewIdx(i => Math.min(viewing.items.length-1, i+1))} />
           </div>
 
           {currentHistoria.caption && (
-            <div style={{ padding:'12px 16px 24px', color:'white', fontSize:14, background:'linear-gradient(transparent, rgba(0,0,0,0.7))', textAlign:'center' }}>
+            <div style={{ padding:'8px 16px', color:'white', fontSize:14, background:'rgba(0,0,0,0.5)', textAlign:'center' }}>
               {currentHistoria.caption}
             </div>
           )}
+
+          <div style={{ display:'flex', gap:8, padding:'8px 16px', justifyContent:'center' }}>
+            {['❤️','🔥','😂','👏','🍺'].map(e => (
+              <button key={e} onClick={() => sendReply(e)} style={{ background:'rgba(255,255,255,0.15)', border:'none', borderRadius:20, padding:'6px 10px', fontSize:18, cursor:'pointer' }}>{e}</button>
+            ))}
+          </div>
+
+          <div style={{ display:'flex', gap:8, padding:'8px 14px 20px', background:'rgba(0,0,0,0.4)' }}>
+            <input
+              value={replyText}
+              onChange={e => setReplyText(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && replyText.trim() && sendReply(null)}
+              placeholder={`Responder a ${viewing.profile?.display_name?.split(' ')[0]}...`}
+              style={{ flex:1, background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.3)', borderRadius:20, padding:'8px 14px', color:'white', fontSize:13, outline:'none' }}
+            />
+            {replyText.trim() && (
+              <button onClick={() => sendReply(null)} disabled={sendingReply} style={{ background:'var(--red)', border:'none', borderRadius:20, padding:'8px 14px', color:'white', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                Enviar
+              </button>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Add story */}
       {adding && (
         <div className="overlay" onClick={e => e.target===e.currentTarget && setAdding(false)}>
           <div className="sheet">
@@ -123,10 +152,7 @@ export default function HistoriasCarrusel({ historias, userId, onAdd, uploadImag
             <div className="sheet-title">Nueva historia</div>
             <input ref={fileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={e => { const f=e.target.files[0]; if(!f) return; setFile(f); setPreview(URL.createObjectURL(f)) }} />
             <div onClick={() => fileRef.current.click()} style={{ width:'100%', height:200, border:'1.5px dashed var(--gray-200)', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', overflow:'hidden', marginBottom:12 }}>
-              {preview
-                ? <img src={preview} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                : <div style={{ textAlign:'center', color:'var(--gray-400)' }}><div style={{ fontSize:36 }}>📸</div><div style={{ fontSize:13, marginTop:6 }}>Toca para añadir foto</div></div>
-              }
+              {preview ? <img src={preview} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <div style={{ textAlign:'center', color:'var(--gray-400)' }}><div style={{ fontSize:36 }}>📸</div><div style={{ fontSize:13, marginTop:6 }}>Toca para añadir foto</div></div>}
             </div>
             <input className="form-input" placeholder="¿Qué está pasando? (opcional)" value={caption} onChange={e => setCaption(e.target.value)} style={{ marginBottom:12 }} />
             <button className="primary-btn" onClick={submitHistoria} disabled={!file||saving}>{saving?'Publicando...':'Publicar historia'}</button>
