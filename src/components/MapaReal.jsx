@@ -202,11 +202,13 @@ export function MiniMapa({ onLocationPick, initialCoords }) {
 
   function onReady(m) {
     mapRef.current = m
+
     if (initialCoords) {
       const mk = L.marker([initialCoords.lat, initialCoords.lng], { draggable: true }).addTo(m)
       mk.on('dragend', ev => { const p = ev.target.getLatLng(); onLocationPick({ lat: p.lat, lng: p.lng }) })
       pinRef.current = mk
     }
+
     m.on('click', e => {
       const { lat, lng } = e.latlng
       if (pinRef.current) pinRef.current.remove()
@@ -217,12 +219,24 @@ export function MiniMapa({ onLocationPick, initialCoords }) {
     })
   }
 
+  // React to coords changing AFTER mount (e.g. from geolocation)
+  useEffect(() => {
+    if (!initialCoords || !mapRef.current) return
+    const { lat, lng } = initialCoords
+
+    // Move map to new location
+    mapRef.current.setView([lat, lng], 17)
+
+    // Update or create pin
+    if (pinRef.current) pinRef.current.remove()
+    const mk = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current)
+    mk.on('dragend', ev => { const p = ev.target.getLatLng(); onLocationPick({ lat: p.lat, lng: p.lng }) })
+    pinRef.current = mk
+  }, [initialCoords?.lat, initialCoords?.lng])
+
   return (
     <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #ddd', position: 'relative' }}>
-      <MapBox
-        heightPx={180}
-        onReady={onReady}
-      />
+      <MapBox heightPx={180} onReady={onReady} />
       <div style={{ position: 'absolute', top: 6, left: 6, zIndex: 999, background: 'rgba(0,0,0,0.7)', color: 'white', fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 8, pointerEvents: 'none' }}>
         👆 Toca para marcar la ubicación
       </div>
