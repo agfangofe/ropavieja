@@ -6,6 +6,8 @@ import LoginPage from "./pages/LoginPage";
 import AddBarModal from "./components/AddBarModal";
 import DebateModal from "./components/DebateModal";
 import MapaReal from "./components/MapaReal";
+import BarDetalleModal from "./components/BarDetalleModal";
+import EditPerfilModal from "./components/EditPerfilModal";
 
 const FONTS = `@import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Instrument+Sans:wght@400;500&display=swap");`;
 
@@ -219,6 +221,8 @@ export default function App() {
   const [dondeResult,setDondeResult] = useState(null);
   const [commentInputs,setCommentInputs] = useState({});
   const [localCheckins,setLocalCheckins] = useState({});
+  const [selectedBar,setSelectedBar] = useState(null);
+  const [showEditPerfil,setShowEditPerfil] = useState(false);
 
   const isViernes = new Date().getDay()===5 && new Date().getHours()>=18;
 
@@ -273,7 +277,7 @@ export default function App() {
             {baresLoading && <div style={{padding:24,textAlign:"center",color:"var(--gray-400)",fontSize:13}}>Cargando...</div>}
 
             {sorted.map((bar,i)=>(
-              <div key={bar.id} className={`bar-card${bar.isCrown?" crown":""}${bar.isGhost?" ghost-card":""}${bar.isHot?" hot-card":""}`}>
+              <div key={bar.id} className={`bar-card${bar.isCrown?" crown":""}${bar.isGhost?" ghost-card":""}${bar.isHot?" hot-card":""}`} onClick={()=>setSelectedBar(bar)}>
                 <div className="card-main">
                   <span className={`rank-num${i===0?" gold":i===1?" silver":i===2?" bronze":""}`}>{i+1}</span>
                   <div className="bar-thumb">{bar.image_url?<img src={bar.image_url} alt={bar.name}/>:<span>🍺</span>}</div>
@@ -429,7 +433,11 @@ export default function App() {
                 {profile?.avatar_url?<img src={profile.avatar_url} alt=""/>:initials(profile?.display_name)}
               </div>
               <div className="profile-name-big">{profile?.display_name||session.user.email}</div>
-              <div className="profile-city">Madrid · desde {new Date(session.user.created_at).getFullYear()}</div>
+              <div className="profile-city">{profile?.ciudad||'Madrid'} · desde {new Date(session.user.created_at).getFullYear()}</div>
+              {profile?.bio && <div style={{fontSize:12,color:'var(--gray-400)',marginTop:6,padding:'0 16px'}}>{profile.bio}</div>}
+              <button onClick={()=>setShowEditPerfil(true)} style={{marginTop:10,background:'none',border:'1px solid rgba(255,255,255,0.2)',color:'var(--gray-400)',borderRadius:20,padding:'4px 14px',fontSize:11,cursor:'pointer',fontFamily:'var(--font-body)'}}>
+                ✏️ Editar perfil
+              </button>
               <div className="badge-strip">
                 {myPosts.length>=10&&<span className="badge badge-gold">🏆 El Enterao del Barrio</span>}
                 {bares.filter(b=>b.isGhost&&(b.userVisited||localCheckins[b.id])).length>0&&<span className="badge badge-ghost">👻 Cazafantasmas</span>}
@@ -487,6 +495,8 @@ export default function App() {
 
         {showAdd&&<AddBarModal onAdd={addBar} onClose={()=>{setShowAdd(false);setPendingCoords(null)}} uploadImage={uploadImage} initialCoords={pendingCoords}/>}
         {debatePost&&<DebateModal post={debatePost} onClose={()=>setDebatePost(null)}/>}
+        {selectedBar&&<BarDetalleModal bar={selectedBar} userId={userId} profile={profile} onClose={()=>setSelectedBar(null)} onRefresh={()=>{refetch();setSelectedBar(null)}}/>}
+        {showEditPerfil&&<EditPerfilModal profile={profile} onClose={()=>setShowEditPerfil(false)} onRefresh={()=>window.location.reload()}/>}
       </div>
     </>
   );
