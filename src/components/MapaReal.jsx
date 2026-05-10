@@ -53,6 +53,9 @@ export default function MapaReal({ bares, onAddBar, onCheckin, localCheckins }) 
     layerRef.current = L.layerGroup().addTo(map)
     mapRef.current = map
 
+    // Critical: force Leaflet to recalculate size after mount
+    setTimeout(() => map.invalidateSize(), 100)
+
     map.on('click', (e) => {
       if (!addingRef.current) return
       const { lat, lng } = e.latlng
@@ -113,8 +116,11 @@ export default function MapaReal({ bares, onAddBar, onCheckin, localCheckins }) 
 
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0 }}>
-      <div style={{ position:'relative', flex:1, minHeight:320 }}>
-        <div ref={containerRef} style={{ width:'100%', height:'100%', minHeight:320 }} />
+      <div style={{ position:'relative', flex:1, minHeight:0 }}>
+        <div
+          ref={containerRef}
+          style={{ width:'100%', height:'100%', position:'absolute', inset:0 }}
+        />
         {adding && (
           <div style={{ position:'absolute', top:12, left:'50%', transform:'translateX(-50%)', background:'#1A1916', color:'white', fontSize:12, fontWeight:600, padding:'8px 16px', borderRadius:20, zIndex:1000, whiteSpace:'nowrap', pointerEvents:'none' }}>
             👆 Toca el mapa para marcar la ubicación

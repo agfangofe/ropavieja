@@ -323,7 +323,7 @@ export default function App() {
         )}
 
         {tab==="mapa" && (
-          <div className="section" style={{display:"flex",flexDirection:"column",overflow:"hidden"}}>
+          <div className="section" style={{display:"flex",flexDirection:"column",overflow:"hidden",height:"calc(100vh - 112px)"}}>
             <Suspense fallback={<div style={{padding:40,textAlign:"center",color:"var(--gray-400)",fontSize:13}}>Cargando mapa...</div>}>
               <MapaReal
                 bares={bares}
