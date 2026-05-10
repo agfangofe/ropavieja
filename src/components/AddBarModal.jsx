@@ -14,7 +14,12 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
   function useMyLocation() {
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
     if (!navigator.geolocation) return alert('Tu navegador no soporta geolocalización')
+    if (isSafari) {
+      alert('Safari bloquea la geolocalización en esta app. Usa Chrome o toca el mapa para marcar la ubicación manualmente.')
+      return
+    }
     setLocating(true)
     navigator.geolocation.getCurrentPosition(
       pos => {
@@ -22,7 +27,11 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
         setLocating(false)
       },
       err => {
-        alert('No se pudo obtener tu ubicación. Toca el mapa para marcarla manualmente.')
+        if (err.code === 1) {
+          alert('Has bloqueado el permiso de ubicación. Actívalo en la configuración del navegador.')
+        } else {
+          alert('No se pudo obtener tu ubicación. Toca el mapa para marcarla manualmente.')
+        }
         setLocating(false)
       },
       { enableHighAccuracy: true, timeout: 8000 }
