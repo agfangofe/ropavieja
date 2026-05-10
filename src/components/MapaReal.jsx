@@ -17,6 +17,21 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
+function makeBarIcon(bar) {
+  const color = bar.isCrown ? '#D4873A' : bar.isGhost ? '#9E9A92' : '#D94F3D'
+  const emoji = bar.isGhost ? '👻' : bar.isCrown ? '👑' : '🍺'
+  return L.divIcon({
+    className: '',
+    html: `<div style="display:flex;flex-direction:column;align-items:center;">
+      <div style="width:34px;height:34px;border-radius:50%;background:${color};border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,0.3);">${emoji}</div>
+      <div style="background:white;border:1px solid ${color};border-radius:6px;padding:1px 5px;font-size:9px;font-weight:700;margin-top:2px;white-space:nowrap;max-width:80px;overflow:hidden;text-overflow:ellipsis;color:#1A1916;">${bar.name}</div>
+    </div>`,
+    iconSize: [34, 56],
+    iconAnchor: [17, 56],
+    popupAnchor: [0, -58],
+  })
+}
+
 function MapBox({ heightPx, onReady }) {
   const ref = useRef(null)
   const map = useRef(null)
@@ -85,7 +100,7 @@ export default function MapaReal({ bares, onAddBar, onCheckin, localCheckins, on
     bares.forEach(bar => {
       if (!bar.lat || !bar.lng) return
       const visited = bar.userVisited || localCheckins?.[bar.id]
-      const mk = L.marker([bar.lat, bar.lng])
+      const mk = L.marker([bar.lat, bar.lng], { icon: makeBarIcon(bar) })
       mk.bindPopup(`
         <div style="font-family:system-ui,sans-serif;min-width:160px;">
           <b style="font-size:14px;color:#1A1916;">${bar.name}</b><br/>
