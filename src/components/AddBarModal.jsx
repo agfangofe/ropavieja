@@ -2,15 +2,32 @@ import { useState, useRef } from 'react'
 import { MiniMapa } from './MapaReal'
 
 export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords }) {
-  const [form, setForm] = useState({ name: '', barrio: '', precio: '', review: '', nota: '' })
+  const [form, setForm] = useState({ name: '', precio: '', review: '', nota: '' })
   const [stars, setStars] = useState(3)
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [saving, setSaving] = useState(false)
   const [coords, setCoords] = useState(initialCoords || null)
+  const [locating, setLocating] = useState(false)
   const fileRef = useRef()
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
+
+  function useMyLocation() {
+    if (!navigator.geolocation) return alert('Tu navegador no soporta geolocalización')
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        setLocating(false)
+      },
+      err => {
+        alert('No se pudo obtener tu ubicación. Toca el mapa para marcarla manualmente.')
+        setLocating(false)
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    )
+  }
 
   const handleSubmit = async () => {
     if (!form.name.trim()) return
@@ -20,7 +37,7 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
       if (imageFile && uploadImage) image_url = await uploadImage(imageFile)
       await onAdd({ ...form, tapa_score: stars * 2, image_url, lat: coords?.lat ?? null, lng: coords?.lng ?? null })
       onClose()
-    } catch (e) { console.error(e) }
+    } catch(e) { console.error(e) }
     finally { setSaving(false) }
   }
 
@@ -35,15 +52,9 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
           <input className="form-input" placeholder="Ej: Bar Manolo" value={form.name} onChange={e => set('name', e.target.value)} />
         </div>
 
-        <div className="form-2col">
-          <div className="form-group">
-            <label className="form-label">Precio de la caña</label>
-            <input className="form-input" placeholder="1.20€" value={form.precio} onChange={e => set('precio', e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Barrio</label>
-            <input className="form-input" placeholder="Lavapiés" value={form.barrio} onChange={e => set('barrio', e.target.value)} />
-          </div>
+        <div className="form-group">
+          <label className="form-label">Precio de la caña</label>
+          <input className="form-input" placeholder="1.20€" value={form.precio} onChange={e => set('precio', e.target.value)} />
         </div>
 
         <div className="form-group">
@@ -67,10 +78,21 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
 
         <div className="form-group">
           <label className="form-label" style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-            Ubicación en el mapa
-            {coords && <span style={{ fontSize:10, color:'#3A7D5B', fontWeight:600, background:'#E4F2EB', padding:'2px 7px', borderRadius:8 }}>✓ Marcada</span>}
+            <span>Ubicación en el mapa {coords && <span style={{ fontSize:10, color:'var(--green)', fontWeight:600, background:'var(--green-light)', padding:'2px 7px', borderRadius:8, marginLeft:6 }}>✓ Marcada</span>}</span>
           </label>
-          <MiniMapa onLocationPick={setCoords} initialCoords={initialCoords} />
+
+          {/* Geolocation button */}
+          <button
+            onClick={useMyLocation}
+            disabled={locating}
+            style={{ width:'100%', marginBottom:8, padding:'9px 12px', background:'var(--purple-light)', color:'var(--purple)', border:'1px solid var(--purple)', borderRadius:'var(--radius)', fontSize:13, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, fontFamily:'var(--font-body)' }}
+          >
+            {locating ? '📡 Obteniendo ubicación...' : '📍 Usar mi ubicación actual'}
+          </button>
+
+          <div style={{ fontSize:11, color:'var(--gray-400)', marginBottom:8, textAlign:'center' }}>— o toca el mapa para marcarla —</div>
+
+          <MiniMapa onLocationPick={setCoords} initialCoords={coords} />
         </div>
 
         <input ref={fileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={e => {
