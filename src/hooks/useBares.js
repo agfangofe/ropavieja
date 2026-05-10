@@ -59,6 +59,8 @@ export function useBares(userId) {
       barrio: data.barrio,
       precio_cana: data.precio,
       image_url: data.image_url || null,
+      lat: data.lat || null,
+      lng: data.lng || null,
       added_by: userId,
       last_activity_at: new Date().toISOString(),
     })

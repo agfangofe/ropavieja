@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { useBares } from "./hooks/useBares";
 import { useFeed } from "./hooks/useFeed";
 import LoginPage from "./pages/LoginPage";
 import AddBarModal from "./components/AddBarModal";
 import DebateModal from "./components/DebateModal";
+const MapaReal = lazy(() => import("./components/MapaReal"));
 
 const FONTS = `@import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Instrument+Sans:wght@400;500&display=swap");`;
 
@@ -213,6 +214,7 @@ export default function App() {
   const [tab,setTab] = useState("ranking");
   const [rankMode,setRankMode] = useState("global");
   const [showAdd,setShowAdd] = useState(false);
+  const [pendingCoords,setPendingCoords] = useState(null);
   const [debatePost,setDebatePost] = useState(null);
   const [dondeResult,setDondeResult] = useState(null);
   const [commentInputs,setCommentInputs] = useState({});
@@ -321,54 +323,19 @@ export default function App() {
         )}
 
         {tab==="mapa" && (
-          <div className="section">
-            <div className="map-container">
-              <div className="map-search-bar">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gray-400)" strokeWidth="1.8" strokeLinecap="round"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input placeholder="Busca un bar o zona..." readOnly/>
-              </div>
-              <div className="map-visual">
-                {[33,66].map(p=><div key={p} className="map-grid-h" style={{top:`${p}%`}}/>)}
-                {[33,66].map(p=><div key={p} className="map-grid-v" style={{left:`${p}%`}}/>)}
-                {[[8,5,23,20],[8,38,20,20],[8,70,22,20],[42,5,23,18],[42,70,22,18],[72,5,23,18],[72,38,20,18],[72,70,22,18]].map(([t,l,w,h],i)=>
-                  <div key={i} className="map-block" style={{top:`${t}%`,left:`${l}%`,width:`${w}%`,height:`${h}%`}}/>
-                )}
-                {bares.slice(0,6).map((bar,i)=>{
-                  const pos=[[15,27],[50,57],[22,63],[60,25],[35,45],[70,38]];
-                  const [top,left]=pos[i]||[30+i*8,25+i*12];
-                  return (
-                    <div key={bar.id} className="map-pin" style={{top:`${top}%`,left:`${left}%`}}>
-                      <div className={`pin-dot ${bar.isCrown?"amber-pin":bar.isGhost?"gray-pin":"red-pin"}`}>
-                        {bar.isGhost?"👻":"🍺"}
-                      </div>
-                      <div className="pin-label">{bar.name}{bar.isCrown?" 👑":""}</div>
-                    </div>
-                  );
-                })}
-                <button className="map-add-fab" onClick={()=>setShowAdd(true)}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                </button>
-              </div>
-              <div className="map-legend">
-                <div className="legend-item"><div className="legend-dot" style={{background:"var(--amber)"}}/>Predilecto</div>
-                <div className="legend-item"><div className="legend-dot" style={{background:"var(--red)"}}/>Activo</div>
-                <div className="legend-item"><div className="legend-dot" style={{background:"var(--gray-400)"}}/>Fantasma 👻</div>
-              </div>
-              <div className="nearby-section">
-                <div className="nearby-title">Cerca de ti</div>
-                {bares.map(bar=>(
-                  <div key={bar.id} className="nearby-item">
-                    <div className="nearby-color" style={{background:bar.isCrown?"var(--amber)":bar.isGhost?"var(--gray-400)":"var(--red)"}}/>
-                    <span className="nearby-name">{bar.name}{bar.isCrown?" 👑":""}{bar.isGhost?" 👻":""}</span>
-                    <span className="nearby-dist">{bar.avgScore?`★ ${bar.avgScore.toFixed(1)}`:"—"}</span>
-                    <button className={`checkin-btn${bar.userVisited||localCheckins[bar.id]?" done":""}`}
-                      onClick={()=>handleCheckin(bar.id)} disabled={bar.userVisited||localCheckins[bar.id]}>
-                      {bar.userVisited||localCheckins[bar.id]?"✓ Anotado":"Estuve aquí"}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="section" style={{display:"flex",flexDirection:"column",overflow:"hidden"}}>
+            <Suspense fallback={<div style={{padding:40,textAlign:"center",color:"var(--gray-400)",fontSize:13}}>Cargando mapa...</div>}>
+              <MapaReal
+                bares={bares}
+                userId={userId}
+                localCheckins={localCheckins}
+                onCheckin={handleCheckin}
+                onAddBar={(coords) => {
+                  setPendingCoords(coords);
+                  setShowAdd(true);
+                }}
+              />
+            </Suspense>
           </div>
         )}
 
@@ -520,7 +487,7 @@ export default function App() {
           ))}
         </div>
 
-        {showAdd&&<AddBarModal onAdd={addBar} onClose={()=>setShowAdd(false)} uploadImage={uploadImage}/>}
+        {showAdd&&<AddBarModal onAdd={addBar} onClose={()=>{setShowAdd(false);setPendingCoords(null)}} uploadImage={uploadImage} initialCoords={pendingCoords}/>}
         {debatePost&&<DebateModal post={debatePost} onClose={()=>setDebatePost(null)}/>}
       </div>
     </>

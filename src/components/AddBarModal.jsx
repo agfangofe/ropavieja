@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 
-export default function AddBarModal({ onAdd, onClose, uploadImage }) {
+export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords }) {
   const [form, setForm] = useState({ name: '', barrio: '', precio: '', review: '', nota: '' })
   const [stars, setStars] = useState(3)
   const [imageFile, setImageFile] = useState(null)
@@ -22,10 +22,14 @@ export default function AddBarModal({ onAdd, onClose, uploadImage }) {
     setSaving(true)
     try {
       let image_url = null
-      if (imageFile && uploadImage) {
-        image_url = await uploadImage(imageFile)
-      }
-      await onAdd({ ...form, tapa_score: stars * 2, image_url })
+      if (imageFile && uploadImage) image_url = await uploadImage(imageFile)
+      await onAdd({
+        ...form,
+        tapa_score: stars * 2,
+        image_url,
+        lat: initialCoords?.lat ?? null,
+        lng: initialCoords?.lng ?? null,
+      })
       onClose()
     } catch (e) {
       console.error(e)
@@ -39,6 +43,16 @@ export default function AddBarModal({ onAdd, onClose, uploadImage }) {
       <div className="sheet">
         <div className="sheet-handle" />
         <div className="sheet-title">Añadir un bar</div>
+
+        {initialCoords ? (
+          <div style={{ background:'var(--green-light)',color:'var(--green)',fontSize:11,fontWeight:600,padding:'6px 10px',borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',gap:6,fontFamily:'var(--font-display)' }}>
+            📍 Ubicación fijada en el mapa ✓
+          </div>
+        ) : (
+          <div style={{ background:'var(--amber-light)',color:'var(--amber)',fontSize:11,padding:'6px 10px',borderRadius:8,marginBottom:12,fontFamily:'var(--font-body)' }}>
+            💡 Cierra esto, toca el mapa para poner el pin y pulsa "Continuar →" para fijar la ubicación exacta.
+          </div>
+        )}
 
         <div className="form-group">
           <label className="form-label">Nombre del bar *</label>
@@ -59,7 +73,7 @@ export default function AddBarModal({ onAdd, onClose, uploadImage }) {
         <div className="form-group">
           <label className="form-label">Calidad de la tapa</label>
           <div className="star-row">
-            {[1, 2, 3, 4, 5].map(n => (
+            {[1,2,3,4,5].map(n => (
               <button key={n} className={`star-b${stars >= n ? ' on' : ''}`} onClick={() => setStars(n)}>★</button>
             ))}
           </div>
@@ -75,14 +89,11 @@ export default function AddBarModal({ onAdd, onClose, uploadImage }) {
           <input className="form-input" type="number" min="0" max="10" step="0.5" placeholder="7.5" value={form.nota} onChange={e => set('nota', e.target.value)} />
         </div>
 
-        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImage} />
+        <input ref={fileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleImage} />
         <div className="upload-zone" onClick={() => fileRef.current.click()}>
           {imagePreview
-            ? <img src={imagePreview} alt="preview" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 8 }} />
-            : <>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2v11zM12 17a4 4 0 100-8 4 4 0 000 8z" /></svg>
-                Subir foto del bar
-              </>
+            ? <img src={imagePreview} alt="preview" style={{ width:'100%',height:100,objectFit:'cover',borderRadius:8 }} />
+            : <><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2v11zM12 17a4 4 0 100-8 4 4 0 000 8z"/></svg>Subir foto del bar</>
           }
         </div>
 
