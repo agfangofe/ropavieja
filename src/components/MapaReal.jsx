@@ -152,7 +152,7 @@ export default function MapaReal({ bares, onAddBar, onCheckin, localCheckins, on
             👆 Toca el mapa para marcar el bar
           </div>
         )}
-        <button onClick={toggleAdding} style={{ position: 'absolute', bottom: 14, right: 14, zIndex: 400, width: 44, height: 44, borderRadius: '50%', background: adding ? '#666' : '#D94F3D', border: 'none', color: 'white', fontSize: 22, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button onClick={toggleAdding} style={{ position: 'absolute', bottom: 14, right: 14, zIndex: 450, width: 44, height: 44, borderRadius: '50%', background: adding ? '#666' : '#D94F3D', border: 'none', color: 'white', fontSize: 22, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {adding ? '✕' : '+'}
         </button>
       </div>
