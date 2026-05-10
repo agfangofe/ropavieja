@@ -65,6 +65,13 @@ export function useFeed(userId) {
       await supabase.from('likes').delete().eq('resena_id', resenaId).eq('user_id', userId)
     } else {
       await supabase.from('likes').insert({ resena_id: resenaId, user_id: userId })
+      // Notify reseña author
+      try {
+        const { data: resena } = await supabase.from('resenas').select('user_id, bar_id').eq('id', resenaId).single()
+        if (resena && resena.user_id !== userId) {
+          await supabase.from('notificaciones').insert({ user_id: resena.user_id, from_user_id: userId, type: 'like', bar_id: resena.bar_id })
+        }
+      } catch(e) { console.error('notif error', e) }
     }
     await fetchFeed()
   }
@@ -72,6 +79,13 @@ export function useFeed(userId) {
   async function postComment(resenaId, text) {
     if (!text.trim()) return
     await supabase.from('comentarios').insert({ resena_id: resenaId, user_id: userId, text: text.trim() })
+    // Notify reseña author
+    try {
+      const { data: resena } = await supabase.from('resenas').select('user_id, bar_id').eq('id', resenaId).single()
+      if (resena && resena.user_id !== userId) {
+        await supabase.from('notificaciones').insert({ user_id: resena.user_id, from_user_id: userId, type: 'mention', bar_id: resena.bar_id })
+      }
+    } catch(e) { console.error('notif error', e) }
     await fetchFeed()
   }
 
