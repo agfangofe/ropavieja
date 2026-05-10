@@ -461,9 +461,27 @@ export default function App() {
             </div>
             <div className="stats-grid">
               <div className="stat-cell"><div className="stat-num">{myPosts.length}</div><div className="stat-label">Reseñas</div></div>
-              <div className="stat-cell"><div className="stat-num">{bares.filter(b=>b.isFav).length}</div><div className="stat-label">Favoritos</div></div>
+              <div className="stat-cell"><div className="stat-num">{bares.filter(b=>b.added_by===userId).length}</div><div className="stat-label">Bares añadidos</div></div>
               <div className="stat-cell"><div className="stat-num">{myAvg}</div><div className="stat-label">Nota media</div></div>
             </div>
+
+            {/* Mis bares añadidos */}
+            {bares.filter(b=>b.added_by===userId).length>0 && (
+              <div className="profile-section">
+                <div className="section-label">Bares que añadí</div>
+                {bares.filter(b=>b.added_by===userId).map(bar=>(
+                  <div key={bar.id} className="visit-item" style={{cursor:'pointer'}} onClick={()=>setSelectedBar(bar)}>
+                    <div className="visit-icon">{bar.isCrown?'👑':bar.isGhost?'👻':'🍺'}</div>
+                    <div style={{flex:1}}>
+                      <div className="visit-name">{bar.name}</div>
+                      <div className="visit-meta">{bar.barrio||''} · {bar.reviewCount} reseña{bar.reviewCount!==1?'s':''}</div>
+                    </div>
+                    <div className="with-chip">{bar.avgScore?`★ ${bar.avgScore.toFixed(1)}`:'sin votos'}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="profile-section">
               <div className="section-label">Historial de visitas</div>
               {bares.filter(b=>b.userVisited||localCheckins[b.id]).map(bar=>(
