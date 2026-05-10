@@ -4,6 +4,9 @@ import { useBares } from "./hooks/useBares";
 import { useFeed } from "./hooks/useFeed";
 import { useNotificaciones } from "./hooks/useNotificaciones";
 import { useHistorias } from "./hooks/useHistorias";
+import { usePosts } from "./hooks/usePosts";
+import { useQuedadas } from "./hooks/useQuedadas";
+import { computeBadges } from "./lib/badges";
 import LoginPage from "./pages/LoginPage";
 import AddBarModal from "./components/AddBarModal";
 import DebateModal from "./components/DebateModal";
@@ -12,6 +15,9 @@ import BarDetalleModal from "./components/BarDetalleModal";
 import EditPerfilModal from "./components/EditPerfilModal";
 import NotifPanel from "./components/NotifPanel";
 import HistoriasCarrusel from "./components/HistoriasCarrusel";
+import NuevoPostModal from "./components/NuevoPostModal";
+import QuedadasPanel from "./components/QuedadasPanel";
+import EstadisticasPanel from "./components/EstadisticasPanel";
 
 const FONTS = `@import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Instrument+Sans:wght@400;500&display=swap");`;
 
@@ -217,7 +223,9 @@ export default function App() {
   const {bares,loading:baresLoading,addBar,toggleFav,addCheckin,uploadImage,refetch} = useBares(userId);
   const {feed,loading:feedLoading,toggleLike,postComment,toggleReaccion,addEmojiComment} = useFeed(userId);
   const {notifs,unread,markAllRead} = useNotificaciones(userId);
-  const {historias,addHistoria} = useHistorias(userId);
+  const {historias,addHistoria,refetch:refetchHistorias} = useHistorias(userId);
+  const {posts,createPost,deletePost,toggleLike:togglePostLike,addComment:addPostComment,deleteComment:deletePostComment} = usePosts(userId);
+  const {quedadas,createQuedada,toggleAsistencia,deleteQuedada} = useQuedadas(userId);
 
   const [tab,setTab] = useState("ranking");
   const [rankMode,setRankMode] = useState("global");
@@ -230,6 +238,8 @@ export default function App() {
   const [selectedBar,setSelectedBar] = useState(null);
   const [showEditPerfil,setShowEditPerfil] = useState(false);
   const [showNotifs,setShowNotifs] = useState(false);
+  const [showNewPost,setShowNewPost] = useState(false);
+  const [feedTab,setFeedTab] = useState("todo"); // todo | resenas | posts | quedadas | stats
 
   const isViernes = new Date().getDay()===5 && new Date().getHours()>=18;
 
@@ -365,87 +375,153 @@ export default function App() {
 
         {tab==="feed" && (
           <div className="section">
-            <HistoriasCarrusel historias={historias} userId={userId} onAdd={addHistoria} uploadImage={uploadImage} />
-            <div className="feed-wrap">
-              {feedLoading&&<div style={{padding:24,textAlign:"center",color:"var(--gray-400)",fontSize:13}}>Cargando feed...</div>}
-              {!feedLoading&&feed.length===0&&(
-                <div className="empty-state">
-                  <div className="emoji">📭</div>
-                  <div className="title">El feed está vacío</div>
-                  <div>Añade un bar y escribe la primera reseña</div>
-                </div>
-              )}
-              {feed.map((post,pi)=>(
-                <div key={post.id} className={`feed-card${post.isHot?" hot":""}`}>
-                  {post.isHot&&<div className="hot-banner">🔥 Opinión caliente en {post.bares?.name}</div>}
-                  <div className="feed-header">
-                    <Avatar profile={post.profiles} size={30} bgIdx={pi}/>
-                    <div>
-                      <div className="feed-user-name">{post.profiles?.display_name||"Alguien"}</div>
-                      <div className="feed-bar-ref">📍 {post.bares?.name}</div>
+            <HistoriasCarrusel historias={historias} userId={userId} onAdd={addHistoria} uploadImage={uploadImage} onDelete={refetchHistorias} />
+
+            {/* Feed sub-tabs */}
+            <div style={{display:"flex",gap:3,background:"var(--gray-100)",borderRadius:10,padding:3,margin:"10px 12px 0"}}>
+              {[["todo","Todo"],["resenas","Reseñas"],["posts","Posts"],["quedadas","📅"],["stats","📊"]].map(([id,label])=>(
+                <button key={id} onClick={()=>setFeedTab(id)} style={{flex:1,padding:"6px 2px",border:"none",borderRadius:8,fontSize:10,fontWeight:600,cursor:"pointer",background:feedTab===id?"var(--paper)":"none",color:feedTab===id?"var(--ink)":"var(--gray-600)",boxShadow:feedTab===id?"0 1px 3px rgba(0,0,0,0.1)":"none",fontFamily:"var(--font-display)"}}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* New post button */}
+            {(feedTab==="todo"||feedTab==="posts") && (
+              <div style={{padding:"10px 12px 0"}}>
+                <button onClick={()=>setShowNewPost(true)} style={{width:"100%",padding:"11px 14px",background:"var(--gray-50)",border:"1px solid var(--border)",borderRadius:"var(--radius-lg)",cursor:"pointer",textAlign:"left",color:"var(--gray-400)",fontSize:13,fontFamily:"var(--font-body)",display:"flex",alignItems:"center",gap:10}}>
+                  <Avatar profile={profile} size={28} />
+                  ¿Qué está pasando en el barrio?
+                </button>
+              </div>
+            )}
+
+            {/* Quedadas tab */}
+            {feedTab==="quedadas" && (
+              <QuedadasPanel quedadas={quedadas} userId={userId} bares={bares} onCreateQuedada={createQuedada} onToggleAsistencia={toggleAsistencia} onDeleteQuedada={deleteQuedada} />
+            )}
+
+            {/* Stats tab */}
+            {feedTab==="stats" && (
+              <EstadisticasPanel bares={bares} feed={feed} userId={userId} />
+            )}
+
+            {/* Free posts */}
+            {(feedTab==="todo"||feedTab==="posts") && (
+              <div className="feed-wrap">
+                {posts.map((post,pi)=>(
+                  <div key={post.id} className="feed-card" style={{marginTop:pi===0?8:0}}>
+                    <div className="feed-header">
+                      <Avatar profile={post.profiles} size={30} bgIdx={pi+10}/>
+                      <div>
+                        <div className="feed-user-name">{post.profiles?.display_name||"Alguien"}</div>
+                        <div className="feed-bar-ref">💬 Post libre</div>
+                      </div>
+                      <span className="feed-time">{timeAgo(post.created_at)}</span>
+                      {post.user_id===userId && (
+                        <button onClick={()=>{ if(confirm('¿Eliminar este post?')) deletePost(post.id) }} style={{background:"none",border:"none",color:"var(--gray-400)",cursor:"pointer",fontSize:14,padding:0}}>✕</button>
+                      )}
                     </div>
-                    <span className="feed-time">{timeAgo(post.created_at)}</span>
-                  </div>
-                  {post.image_url&&<img className="feed-img" src={post.image_url} alt="Bar"/>}
-                  <div className="feed-body">
-                    <div className="feed-text">{post.review_text||"(Sin reseña)"}</div>
-                    {post.score&&<span className="nota-chip">★ {post.score} nota personal</span>}
-                  </div>
-                  <div className="comments-wrap">
-                    {(post.comentarios||[]).map((c,ci)=>{
-                      const rc={};
-                      (c.reacciones||[]).forEach(r=>{
-                        if(!rc[r.emoji])rc[r.emoji]={count:0,mine:false};
-                        rc[r.emoji].count++;
-                        if(r.user_id===userId)rc[r.emoji].mine=true;
-                      });
-                      return (
-                        <div key={c.id} className="comment-row">
-                          <Avatar profile={c.profiles} size={24} bgIdx={ci+2}/>
-                          <div className="c-body">
-                            <div className="c-user">{c.profiles?.display_name||"Alguien"}</div>
-                            <div className="c-text">{c.text}</div>
-                            {Object.keys(rc).length>0&&(
-                              <div className="c-reactions">
-                                {Object.entries(rc).map(([emoji,{count,mine}])=>(
-                                  <button key={emoji} className={`react-btn${mine?" active":""}`} onClick={()=>toggleReaccion(c.id,emoji)}>
-                                    {emoji} {count}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <div className="emoji-quick">
-                      {["🍺","🤌","😂","🤣","💀"].map(e=>(
-                        <button key={e} className="emoji-q" onClick={()=>addEmojiComment(post.id,e)}>{e}</button>
-                      ))}
-                    </div>
-                    <div className="add-comment-row">
-                      <Avatar profile={profile} size={24}/>
-                      <input value={commentInputs[post.id]||""} onChange={e=>setCommentInputs(p=>({...p,[post.id]:e.target.value}))}
-                        onKeyDown={e=>e.key==="Enter"&&sendComment(post.id)} placeholder="Añade un comentario..."/>
-                      <button className="send-btn" onClick={()=>sendComment(post.id)}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                    {post.image_url&&<img className="feed-img" src={post.image_url} alt=""/>}
+                    {post.text&&<div className="feed-body"><div className="feed-text">{post.text}</div></div>}
+                    <div className="feed-actions-row">
+                      <button className={`action-btn${post.userLiked?" liked":""}`} onClick={()=>togglePostLike(post.id,post.userLiked)}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill={post.userLiked?"var(--red)":"none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                        {post.likeCount}
+                      </button>
+                      <button className="action-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/></svg>
+                        {(post.post_comentarios||[]).length}
                       </button>
                     </div>
                   </div>
-                  <div className="feed-actions-row">
-                    <button className={`action-btn${post.userLiked?" liked":""}`} onClick={()=>toggleLike(post.id,post.userLiked)}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill={post.userLiked?"var(--red)":"none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-                      {post.likeCount}
-                    </button>
-                    <button className="action-btn">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/></svg>
-                      {(post.comentarios||[]).length}
-                    </button>
-                    {post.isHot&&<button className="debate-open-btn" onClick={()=>setDebatePost(post)}>⚖️ Debate</button>}
+                ))}
+              </div>
+            )}
+
+            {/* Reseñas feed */}
+            {(feedTab==="todo"||feedTab==="resenas") && (
+              <div className="feed-wrap">
+                {feedLoading&&<div style={{padding:24,textAlign:"center",color:"var(--gray-400)",fontSize:13}}>Cargando feed...</div>}
+                {!feedLoading&&feed.length===0&&(
+                  <div className="empty-state">
+                    <div className="emoji">📭</div>
+                    <div className="title">El feed está vacío</div>
+                    <div>Añade un bar y escribe la primera reseña</div>
                   </div>
-                </div>
-              ))}
-            </div>
+                )}
+                {feed.map((post,pi)=>(
+                  <div key={post.id} className={`feed-card${post.isHot?" hot":""}`}>
+                    {post.isHot&&<div className="hot-banner">🔥 Opinión caliente en {post.bares?.name}</div>}
+                    <div className="feed-header">
+                      <Avatar profile={post.profiles} size={30} bgIdx={pi}/>
+                      <div>
+                        <div className="feed-user-name">{post.profiles?.display_name||"Alguien"}</div>
+                        <div className="feed-bar-ref">📍 {post.bares?.name}</div>
+                      </div>
+                      <span className="feed-time">{timeAgo(post.created_at)}</span>
+                    </div>
+                    {post.image_url&&<img className="feed-img" src={post.image_url} alt="Bar"/>}
+                    <div className="feed-body">
+                      <div className="feed-text">{post.review_text||"(Sin reseña)"}</div>
+                      {post.score&&<span className="nota-chip">★ {post.score} nota personal</span>}
+                    </div>
+                    <div className="comments-wrap">
+                      {(post.comentarios||[]).map((c,ci)=>{
+                        const rc={};
+                        (c.reacciones||[]).forEach(r=>{
+                          if(!rc[r.emoji])rc[r.emoji]={count:0,mine:false};
+                          rc[r.emoji].count++;
+                          if(r.user_id===userId)rc[r.emoji].mine=true;
+                        });
+                        return (
+                          <div key={c.id} className="comment-row">
+                            <Avatar profile={c.profiles} size={24} bgIdx={ci+2}/>
+                            <div className="c-body">
+                              <div className="c-user">{c.profiles?.display_name||"Alguien"}</div>
+                              <div className="c-text">{c.text}</div>
+                              {Object.keys(rc).length>0&&(
+                                <div className="c-reactions">
+                                  {Object.entries(rc).map(([emoji,{count,mine}])=>(
+                                    <button key={emoji} className={`react-btn${mine?" active":""}`} onClick={()=>toggleReaccion(c.id,emoji)}>
+                                      {emoji} {count}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className="emoji-quick">
+                        {["🍺","🤌","😂","🤣","💀"].map(e=>(
+                          <button key={e} className="emoji-q" onClick={()=>addEmojiComment(post.id,e)}>{e}</button>
+                        ))}
+                      </div>
+                      <div className="add-comment-row">
+                        <Avatar profile={profile} size={24}/>
+                        <input value={commentInputs[post.id]||""} onChange={e=>setCommentInputs(p=>({...p,[post.id]:e.target.value}))}
+                          onKeyDown={e=>e.key==="Enter"&&sendComment(post.id)} placeholder="Añade un comentario..."/>
+                        <button className="send-btn" onClick={()=>sendComment(post.id)}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="feed-actions-row">
+                      <button className={`action-btn${post.userLiked?" liked":""}`} onClick={()=>toggleLike(post.id,post.userLiked)}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill={post.userLiked?"var(--red)":"none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                        {post.likeCount}
+                      </button>
+                      <button className="action-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/></svg>
+                        {(post.comentarios||[]).length}
+                      </button>
+                      {post.isHot&&<button className="debate-open-btn" onClick={()=>setDebatePost(post)}>⚖️ Debate</button>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -462,9 +538,9 @@ export default function App() {
                 ✏️ Editar perfil
               </button>
               <div className="badge-strip">
-                {myPosts.length>=10&&<span className="badge badge-gold">🏆 El Enterao del Barrio</span>}
-                {bares.filter(b=>b.isGhost&&(b.userVisited||localCheckins[b.id])).length>0&&<span className="badge badge-ghost">👻 Cazafantasmas</span>}
-                {myPosts.length<10&&<span className="badge" style={{background:"var(--gray-600)",color:"var(--paper)"}}>🍺 Explorando el barrio</span>}
+                {computeBadges(userId, bares, feed, posts).map(b => (
+                  <span key={b.id} className="badge" style={{background:'var(--gray-600)',color:'var(--paper)'}}>{b.emoji} {b.label}</span>
+                ))}
               </div>
             </div>
             <div className="stats-grid">
@@ -539,6 +615,7 @@ export default function App() {
         {selectedBar&&<BarDetalleModal bar={selectedBar} userId={userId} profile={profile} allProfiles={bares.flatMap(b=>b.resenas||[]).map(r=>r.profiles).filter(Boolean)} uploadImage={uploadImage} onClose={()=>setSelectedBar(null)} onRefresh={()=>{refetch();setSelectedBar(null)}}/>}
         {showEditPerfil&&<EditPerfilModal profile={profile} onClose={()=>setShowEditPerfil(false)} onRefresh={()=>window.location.reload()}/>}
         {showNotifs&&<NotifPanel notifs={notifs} onClose={()=>setShowNotifs(false)} onMarkRead={()=>{markAllRead();setShowNotifs(false)}}/>}
+        {showNewPost&&<NuevoPostModal onPost={createPost} onClose={()=>setShowNewPost(false)} uploadImage={uploadImage}/>}
       </div>
     </>
   );
