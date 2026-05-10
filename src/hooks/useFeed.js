@@ -11,11 +11,11 @@ export function useFeed(userId) {
       .select(`
         *,
         bares(name, barrio),
-        profiles(display_name, avatar_url),
+        profiles!resenas_user_id_fkey(display_name, avatar_url),
         likes(user_id),
         comentarios(
           id, text, created_at,
-          profiles(display_name, avatar_url),
+          profiles!comentarios_user_id_fkey(display_name, avatar_url),
           reacciones(emoji, user_id)
         )
       `)

@@ -1,11 +1,11 @@
-import { useState, lazy, Suspense } from "react";
+import { useState } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { useBares } from "./hooks/useBares";
 import { useFeed } from "./hooks/useFeed";
 import LoginPage from "./pages/LoginPage";
 import AddBarModal from "./components/AddBarModal";
 import DebateModal from "./components/DebateModal";
-const MapaReal = lazy(() => import("./components/MapaReal"));
+import MapaReal from "./components/MapaReal";
 
 const FONTS = `@import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Instrument+Sans:wght@400;500&display=swap");`;
 
@@ -324,18 +324,16 @@ export default function App() {
 
         {tab==="mapa" && (
           <div className="section" style={{display:"flex",flexDirection:"column",overflow:"hidden",height:"calc(100vh - 112px)"}}>
-            <Suspense fallback={<div style={{padding:40,textAlign:"center",color:"var(--gray-400)",fontSize:13}}>Cargando mapa...</div>}>
-              <MapaReal
-                bares={bares}
-                userId={userId}
-                localCheckins={localCheckins}
-                onCheckin={handleCheckin}
-                onAddBar={(coords) => {
-                  setPendingCoords(coords);
-                  setShowAdd(true);
-                }}
-              />
-            </Suspense>
+            <MapaReal
+              bares={bares}
+              userId={userId}
+              localCheckins={localCheckins}
+              onCheckin={handleCheckin}
+              onAddBar={(coords) => {
+                setPendingCoords(coords);
+                setShowAdd(true);
+              }}
+            />
           </div>
         )}
 
