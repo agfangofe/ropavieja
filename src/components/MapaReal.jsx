@@ -155,6 +155,14 @@ export default function MapaReal({ bares, onAddBar, onCheckin, localCheckins, on
         <button onClick={toggleAdding} style={{ position: 'absolute', bottom: 14, right: 14, zIndex: 1000, width: 44, height: 44, borderRadius: '50%', background: adding ? '#666' : '#D94F3D', border: 'none', color: 'white', fontSize: 22, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {adding ? '✕' : '+'}
         </button>
+        <button onClick={() => {
+          if (!navigator.geolocation || !mapRef.current) return
+          navigator.geolocation.getCurrentPosition(pos => {
+            mapRef.current.setView([pos.coords.latitude, pos.coords.longitude], 17)
+          }, () => alert('No se pudo obtener tu ubicación'))
+        }} style={{ position:'absolute', bottom:14, left:14, zIndex:1000, background:'white', border:'none', borderRadius:10, padding:'6px 12px', fontSize:12, fontWeight:600, cursor:'pointer', boxShadow:'0 2px 8px rgba(0,0,0,0.2)', color:'#1A1916', display:'flex', alignItems:'center', gap:5 }}>
+          📍 Mi ubicación
+        </button>
       </div>
 
       {pinPos && adding && (
