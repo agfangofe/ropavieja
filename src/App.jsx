@@ -2,12 +2,16 @@ import { useState } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { useBares } from "./hooks/useBares";
 import { useFeed } from "./hooks/useFeed";
+import { useNotificaciones } from "./hooks/useNotificaciones";
+import { useHistorias } from "./hooks/useHistorias";
 import LoginPage from "./pages/LoginPage";
 import AddBarModal from "./components/AddBarModal";
 import DebateModal from "./components/DebateModal";
 import MapaReal from "./components/MapaReal";
 import BarDetalleModal from "./components/BarDetalleModal";
 import EditPerfilModal from "./components/EditPerfilModal";
+import NotifPanel from "./components/NotifPanel";
+import HistoriasCarrusel from "./components/HistoriasCarrusel";
 
 const FONTS = `@import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Instrument+Sans:wght@400;500&display=swap");`;
 
@@ -210,8 +214,10 @@ function Avatar({profile,size=30,bgIdx=0}) {
 export default function App() {
   const {session,profile,loading:authLoading,signInWithGoogle,signOut} = useAuth();
   const userId = session?.user?.id;
-  const {bares,loading:baresLoading,addBar,toggleFav,addCheckin,uploadImage} = useBares(userId);
+  const {bares,loading:baresLoading,addBar,toggleFav,addCheckin,uploadImage,refetch} = useBares(userId);
   const {feed,loading:feedLoading,toggleLike,postComment,toggleReaccion,addEmojiComment} = useFeed(userId);
+  const {notifs,unread,markAllRead} = useNotificaciones(userId);
+  const {historias,addHistoria} = useHistorias(userId);
 
   const [tab,setTab] = useState("ranking");
   const [rankMode,setRankMode] = useState("global");
@@ -223,6 +229,7 @@ export default function App() {
   const [localCheckins,setLocalCheckins] = useState({});
   const [selectedBar,setSelectedBar] = useState(null);
   const [showEditPerfil,setShowEditPerfil] = useState(false);
+  const [showNotifs,setShowNotifs] = useState(false);
 
   const isViernes = new Date().getDay()===5 && new Date().getHours()>=18;
 
@@ -259,8 +266,14 @@ export default function App() {
             Barrio
             {isViernes && <span className="viernes-chip">Modo Viernes 🍺</span>}
           </div>
-          <div className="user-chip" onClick={()=>setTab("perfil")}>
-            {profile?.avatar_url ? <img src={profile.avatar_url} alt=""/> : initials(profile?.display_name)}
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <div style={{position:'relative',cursor:'pointer'}} onClick={()=>setShowNotifs(p=>!p)}>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--gray-400)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+              {unread>0 && <div style={{position:'absolute',top:-4,right:-4,width:16,height:16,borderRadius:'50%',background:'var(--red)',color:'white',fontSize:9,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'}}>{unread}</div>}
+            </div>
+            <div className="user-chip" onClick={()=>setTab("perfil")}>
+              {profile?.avatar_url ? <img src={profile.avatar_url} alt=""/> : initials(profile?.display_name)}
+            </div>
           </div>
         </div>
 
@@ -333,6 +346,7 @@ export default function App() {
               userId={userId}
               localCheckins={localCheckins}
               onCheckin={handleCheckin}
+              onBarClick={(bar) => setSelectedBar(bar)}
               onAddBar={(coords) => {
                 setPendingCoords(coords);
                 setShowAdd(true);
@@ -343,6 +357,7 @@ export default function App() {
 
         {tab==="feed" && (
           <div className="section">
+            <HistoriasCarrusel historias={historias} userId={userId} onAdd={addHistoria} uploadImage={uploadImage} />
             <div className="feed-wrap">
               {feedLoading&&<div style={{padding:24,textAlign:"center",color:"var(--gray-400)",fontSize:13}}>Cargando feed...</div>}
               {!feedLoading&&feed.length===0&&(
@@ -495,8 +510,9 @@ export default function App() {
 
         {showAdd&&<AddBarModal onAdd={addBar} onClose={()=>{setShowAdd(false);setPendingCoords(null)}} uploadImage={uploadImage} initialCoords={pendingCoords}/>}
         {debatePost&&<DebateModal post={debatePost} onClose={()=>setDebatePost(null)}/>}
-        {selectedBar&&<BarDetalleModal bar={selectedBar} userId={userId} profile={profile} onClose={()=>setSelectedBar(null)} onRefresh={()=>{refetch();setSelectedBar(null)}}/>}
+        {selectedBar&&<BarDetalleModal bar={selectedBar} userId={userId} profile={profile} allProfiles={bares.flatMap(b=>b.resenas||[]).map(r=>r.profiles).filter(Boolean)} uploadImage={uploadImage} onClose={()=>setSelectedBar(null)} onRefresh={()=>{refetch();setSelectedBar(null)}}/>}
         {showEditPerfil&&<EditPerfilModal profile={profile} onClose={()=>setShowEditPerfil(false)} onRefresh={()=>window.location.reload()}/>}
+        {showNotifs&&<NotifPanel notifs={notifs} onClose={()=>setShowNotifs(false)} onMarkRead={()=>{markAllRead();setShowNotifs(false)}}/>}
       </div>
     </>
   );
