@@ -279,6 +279,27 @@ export default function App() {
 
         {tab==="ranking" && (
           <div className="section">
+            {/* ¿Dónde vamos hoy? — prominente arriba */}
+            <div style={{padding:'12px 12px 0'}}>
+              <button
+                onClick={()=>setDondeResult(bares.length?bares[Math.floor(Math.random()*bares.length)].name:"¡Añade bares primero!")}
+                style={{width:'100%',padding:'13px 16px',background:'var(--ink)',border:'none',borderRadius:'var(--radius-lg)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'space-between',color:'var(--paper)',fontFamily:'var(--font-display)'}}
+              >
+                <div style={{textAlign:'left'}}>
+                  <div style={{fontSize:13,fontWeight:700,color:'var(--paper)'}}>🎰 ¿Dónde vamos hoy?</div>
+                  <div style={{fontSize:11,color:'var(--gray-400)',marginTop:2}}>Que decida el azar</div>
+                </div>
+                <div style={{fontSize:22}}>→</div>
+              </button>
+              {dondeResult && (
+                <div className="donde-result" style={{marginTop:8}}>
+                  <div style={{fontSize:11,color:'var(--red)',marginBottom:4,fontFamily:'var(--font-display)',fontWeight:700,textTransform:'uppercase',letterSpacing:1}}>El azar ha hablado</div>
+                  <div className="donde-bar">{dondeResult}</div>
+                  <div className="donde-sub">No se discute. Se va.</div>
+                </div>
+              )}
+            </div>
+
             <div className="rank-header">
               <span className="rank-title">{isViernes?"Modo ahorro 🍺":rankMode==="global"?"Ranking global":"Mi ranking"}</span>
               <div className="toggle-wrap">
@@ -323,19 +344,6 @@ export default function App() {
                 <div>Sé el primero en añadir uno con el botón +</div>
               </div>
             )}
-
-            <div className="donde-wrap">
-              <button className="donde-btn" onClick={()=>setDondeResult(bares.length?bares[Math.floor(Math.random()*bares.length)].name:"¡Ninguno aún! Añade bares primero")}>
-                🎰 {dondeResult?"Tirar otra vez":"¿Dónde vamos hoy? — que decida el azar"}
-              </button>
-              {dondeResult&&(
-                <div className="donde-result">
-                  <div style={{fontSize:11,color:"var(--red)",marginBottom:4,fontFamily:"var(--font-display)",fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>El azar ha hablado</div>
-                  <div className="donde-bar">{dondeResult}</div>
-                  <div className="donde-sub">No se discute. Se va.</div>
-                </div>
-              )}
-            </div>
           </div>
         )}
 
