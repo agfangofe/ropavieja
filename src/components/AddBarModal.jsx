@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { MiniMapa } from './MapaReal'
 
 export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords }) {
-  const [form, setForm] = useState({ name: '', precio: '', review: '', nota: '' })
+  const [form, setForm] = useState({ name: '', barrio: '', precio: '', review: '', nota: '' })
   const [stars, setStars] = useState(3)
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
@@ -35,9 +35,15 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
           <input className="form-input" placeholder="Ej: Bar Manolo" value={form.name} onChange={e => set('name', e.target.value)} />
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Precio de la caña</label>
-          <input className="form-input" placeholder="1.20€" value={form.precio} onChange={e => set('precio', e.target.value)} />
+        <div className="form-2col">
+          <div className="form-group">
+            <label className="form-label">Precio de la caña</label>
+            <input className="form-input" placeholder="1.20€" value={form.precio} onChange={e => set('precio', e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Barrio</label>
+            <input className="form-input" placeholder="Lavapiés" value={form.barrio} onChange={e => set('barrio', e.target.value)} />
+          </div>
         </div>
 
         <div className="form-group">
