@@ -11,6 +11,7 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
   const [locating, setLocating] = useState(false)
   const [searchAddr, setSearchAddr] = useState('')
   const [searchError, setSearchError] = useState('')
+  const [searchSuggestions, setSearchSuggestions] = useState([])
   const fileRef = useRef()
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
@@ -20,16 +21,19 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
     setLocating(true)
     setSearchError('')
     try {
-      const q = encodeURIComponent(searchAddr + ', España')
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
-        headers: { 'Accept-Language': 'es' }
-      })
+      // Limit to Spain with countrycodes, and bias towards current map center if available
+      const centerLat = coords?.lat || 40.4168
+      const centerLng = coords?.lng || -3.7038
+      const q = encodeURIComponent(searchAddr)
+      const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&countrycodes=es&viewbox=${centerLng-0.5},${centerLat+0.5},${centerLng+0.5},${centerLat-0.5}&bounded=0`
+      const res = await fetch(url, { headers: { 'Accept-Language': 'es' } })
       const data = await res.json()
       if (data && data.length > 0) {
         setCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) })
+        setSearchSuggestions(data.slice(0, 4))
         setSearchError('')
       } else {
-        setSearchError('No encontré esa dirección. Prueba con más detalle o toca el mapa.')
+        setSearchError('No encontré ese bar o dirección en España. Prueba con más detalle o toca el mapa.')
       }
     } catch(e) {
       setSearchError('Error al buscar. Toca el mapa para marcar manualmente.')
@@ -103,12 +107,12 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
           </label>
 
           {/* Address search */}
-          <div style={{ display:'flex', gap:6, marginBottom:8 }}>
+          <div style={{ display:'flex', gap:6, marginBottom: searchSuggestions.length > 0 ? 0 : 8 }}>
             <input
               className="form-input"
-              placeholder="Busca por dirección o nombre del bar..."
+              placeholder="Busca el bar o dirección en España..."
               value={searchAddr}
-              onChange={e => setSearchAddr(e.target.value)}
+              onChange={e => { setSearchAddr(e.target.value); if (!e.target.value) setSearchSuggestions([]) }}
               onKeyDown={e => e.key === 'Enter' && searchAddress()}
               style={{ flex:1 }}
             />
@@ -120,6 +124,26 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
               {locating ? '...' : '🔍'}
             </button>
           </div>
+
+          {/* Suggestions list */}
+          {searchSuggestions.length > 0 && (
+            <div style={{ border:'1px solid var(--border)', borderRadius:10, overflow:'hidden', marginBottom:8 }}>
+              {searchSuggestions.map((s, i) => (
+                <div
+                  key={i}
+                  onClick={() => {
+                    setCoords({ lat: parseFloat(s.lat), lng: parseFloat(s.lon) })
+                    setSearchAddr(s.display_name.split(',').slice(0, 2).join(','))
+                    setSearchSuggestions([])
+                  }}
+                  style={{ padding:'9px 12px', borderBottom: i < searchSuggestions.length-1 ? '1px solid var(--border)' : 'none', cursor:'pointer', fontSize:12, color:'var(--ink)', background:'var(--paper)', lineHeight:1.4 }}
+                >
+                  <div style={{ fontWeight:600 }}>{s.display_name.split(',')[0]}</div>
+                  <div style={{ fontSize:10, color:'var(--gray-400)', marginTop:2 }}>{s.display_name.split(',').slice(1, 3).join(',').trim()}</div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* My location button */}
           <button
