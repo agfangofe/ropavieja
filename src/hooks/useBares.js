@@ -10,9 +10,16 @@ export function useBares(userId) {
       .from('bares')
       .select(`
         *,
-        resenas(score, user_id),
+        resenas(
+          id, score, tapa_score, review_text, nota_personal, user_id, created_at,
+          profiles!resenas_user_id_fkey(display_name, avatar_url),
+          comentarios(
+            id, text, created_at,
+            profiles!comentarios_user_id_fkey(display_name, avatar_url)
+          )
+        ),
         favoritos(user_id),
-        checkins(user_id, created_at, profiles(display_name))
+        checkins(user_id, created_at, profiles!checkins_user_id_fkey(display_name))
       `)
       .order('created_at', { ascending: false })
 
