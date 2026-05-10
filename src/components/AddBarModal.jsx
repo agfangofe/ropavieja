@@ -12,13 +12,6 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
-  const handleImage = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    setImageFile(file)
-    setImagePreview(URL.createObjectURL(file))
-  }
-
   const handleSubmit = async () => {
     if (!form.name.trim()) return
     setSaving(true)
@@ -27,11 +20,8 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
       if (imageFile && uploadImage) image_url = await uploadImage(imageFile)
       await onAdd({ ...form, tapa_score: stars * 2, image_url, lat: coords?.lat ?? null, lng: coords?.lng ?? null })
       onClose()
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setSaving(false)
-    }
+    } catch (e) { console.error(e) }
+    finally { setSaving(false) }
   }
 
   return (
@@ -71,26 +61,25 @@ export default function AddBarModal({ onAdd, onClose, uploadImage, initialCoords
         </div>
 
         <div className="form-group">
-          <label className="form-label">Nota personal (privada, 0–10)</label>
+          <label className="form-label">Nota personal (0–10)</label>
           <input className="form-input" type="number" min="0" max="10" step="0.5" placeholder="7.5" value={form.nota} onChange={e => set('nota', e.target.value)} />
         </div>
 
         <div className="form-group">
-          <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="form-label" style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             Ubicación en el mapa
-            {coords && (
-              <span style={{ fontSize: 10, color: '#3A7D5B', fontWeight: 600, background: '#E4F2EB', padding: '2px 7px', borderRadius: 8 }}>
-                ✓ Marcada
-              </span>
-            )}
+            {coords && <span style={{ fontSize:10, color:'#3A7D5B', fontWeight:600, background:'#E4F2EB', padding:'2px 7px', borderRadius:8 }}>✓ Marcada</span>}
           </label>
           <MiniMapa onLocationPick={setCoords} initialCoords={initialCoords} />
         </div>
 
-        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImage} />
+        <input ref={fileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={e => {
+          const f = e.target.files[0]; if (!f) return
+          setImageFile(f); setImagePreview(URL.createObjectURL(f))
+        }} />
         <div className="upload-zone" onClick={() => fileRef.current.click()}>
           {imagePreview
-            ? <img src={imagePreview} alt="preview" style={{ width: '100%', height: 90, objectFit: 'cover', borderRadius: 8 }} />
+            ? <img src={imagePreview} alt="" style={{ width:'100%', height:90, objectFit:'cover', borderRadius:8 }} />
             : <><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2v11zM12 17a4 4 0 100-8 4 4 0 000 8z"/></svg> Subir foto del bar</>
           }
         </div>
