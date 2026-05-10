@@ -47,8 +47,10 @@ export default function MapaReal({ bares, onAddBar, onCheckin, localCheckins }) 
     if (!containerRef.current || mapRef.current) return
 
     const map = L.map(containerRef.current, { center: [40.4168, -3.7038], zoom: 15 })
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap', maxZoom: 19,
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap © CARTO',
+      subdomains: 'abcd',
+      maxZoom: 19,
     }).addTo(map)
     layerRef.current = L.layerGroup().addTo(map)
     mapRef.current = map
