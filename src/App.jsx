@@ -669,7 +669,7 @@ export default function App() {
         {debatePost&&<DebateModal post={debatePost} onClose={()=>setDebatePost(null)}/>}
         {selectedBar&&<BarDetalleModal bar={selectedBar} userId={userId} profile={profile} allProfiles={bares.flatMap(b=>b.resenas||[]).map(r=>r.profiles).filter(Boolean)} uploadImage={uploadImage} onClose={()=>setSelectedBar(null)} onRefresh={()=>{refetch();setSelectedBar(null)}}/>}
         {showEditPerfil&&<EditPerfilModal profile={profile} onClose={()=>setShowEditPerfil(false)} onRefresh={()=>window.location.reload()}/>}
-        {showNotifs&&<NotifPanel notifs={notifs} onClose={()=>setShowNotifs(false)} onMarkRead={()=>{markAllRead();setShowNotifs(false)}}/>}
+        {showNotifs&&<NotifPanel notifs={notifs} bares={bares} onClose={()=>setShowNotifs(false)} onMarkRead={()=>{markAllRead();setShowNotifs(false)}} onBarClick={(bar)=>{setShowNotifs(false);setSelectedBar(bar)}}/>}
         {showNewPost&&<NuevoPostModal onPost={createPost} onClose={()=>setShowNewPost(false)} uploadImage={uploadImage}/>}
       </div>
     </>
