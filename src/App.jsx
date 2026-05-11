@@ -229,6 +229,7 @@ export default function App() {
 
   const [tab,setTab] = useState("ranking");
   const [rankMode,setRankMode] = useState("global");
+  const [rankFilter,setRankFilter] = useState("score"); // score | precio | visitas
   const [showAdd,setShowAdd] = useState(false);
   const [pendingCoords,setPendingCoords] = useState(null);
   const [debatePost,setDebatePost] = useState(null);
@@ -246,10 +247,23 @@ export default function App() {
   if(authLoading) return <><style>{FONTS}{CSS}</style><div className="loading-screen">Barrio<span style={{color:"#D94F3D"}}>.</span></div></>;
   if(!session) return <LoginPage onLogin={signInWithGoogle}/>;
 
-  const sorted = [...bares].sort((a,b)=>{
-    if(isViernes && rankMode==="global") return (parseFloat(a.precio_cana)||99)-(parseFloat(b.precio_cana)||99);
-    return (b.avgScore??0)-(a.avgScore??0);
-  });
+  const sorted = (() => {
+    let list = [...bares]
+    // Personal mode: only bars I added or favorited
+    if (rankMode === "personal") {
+      list = list.filter(b => b.added_by === userId || b.isFav || b.userVisited || localCheckins[b.id])
+    }
+    // Viernes: cheapest first
+    if (isViernes && rankMode === "global") {
+      return list.sort((a,b) => (parseFloat(a.precio_cana)||99)-(parseFloat(b.precio_cana)||99))
+    }
+    // Sort by filter
+    switch(rankFilter) {
+      case 'precio': return list.sort((a,b) => (parseFloat(a.precio_cana)||99)-(parseFloat(b.precio_cana)||99))
+      case 'visitas': return list.sort((a,b) => (b.checkinCount||0)-(a.checkinCount||0))
+      default: return list.sort((a,b) => (b.avgScore??0)-(a.avgScore??0))
+    }
+  })();
 
   const handleCheckin = async(barId) => {
     await addCheckin(barId);
@@ -311,16 +325,30 @@ export default function App() {
             </div>
 
             <div className="rank-header">
-              <span className="rank-title">{isViernes?"Modo ahorro 🍺":rankMode==="global"?"Ranking global":"Mi ranking"}</span>
               <div className="toggle-wrap">
                 <button className={`toggle-opt${rankMode==="global"?" on":""}`} onClick={()=>setRankMode("global")}>Global</button>
                 <button className={`toggle-opt${rankMode==="personal"?" on":""}`} onClick={()=>setRankMode("personal")}>El mío</button>
+                <button className={`toggle-opt${rankMode==="stats"?" on":""}`} onClick={()=>setRankMode("stats")}>📊</button>
               </div>
             </div>
 
+            {/* Filters */}
+            {rankMode !== "stats" && (
+              <div style={{display:"flex",gap:5,padding:"0 12px 10px",overflowX:"auto"}}>
+                {[["score","⭐ Mejor valorado"],["precio","💸 Más barato"],["visitas","📍 Más visitado"]].map(([id,label])=>(
+                  <button key={id} onClick={()=>setRankFilter(id)} style={{flexShrink:0,padding:"5px 12px",border:"1px solid var(--border)",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",background:rankFilter===id?"var(--ink)":"var(--gray-50)",color:rankFilter===id?"var(--paper)":"var(--gray-600)",fontFamily:"var(--font-display)"}}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Stats panel inside ranking */}
+            {rankMode === "stats" && <EstadisticasPanel bares={bares} feed={feed} userId={userId} />}
+
             {baresLoading && <div style={{padding:24,textAlign:"center",color:"var(--gray-400)",fontSize:13}}>Cargando...</div>}
 
-            {sorted.map((bar,i)=>(
+            {rankMode !== "stats" && sorted.map((bar,i)=>(
               <div key={bar.id} className={`bar-card${bar.isCrown?" crown":""}${bar.isGhost?" ghost-card":""}${bar.isHot?" hot-card":""}`} onClick={()=>setSelectedBar(bar)}>
                 <div className="card-main">
                   <span className={`rank-num${i===0?" gold":i===1?" silver":i===2?" bronze":""}`}>{i+1}</span>
@@ -347,11 +375,11 @@ export default function App() {
               </div>
             ))}
 
-            {!baresLoading&&bares.length===0&&(
+            {!baresLoading&&bares.length===0&&rankMode!=="stats"&&(
               <div className="empty-state">
                 <div className="emoji">🍺</div>
-                <div className="title">Aún no hay bares</div>
-                <div>Sé el primero en añadir uno con el botón +</div>
+                <div className="title">{rankMode==="personal"?"Aún no tienes bares propios":"Aún no hay bares"}</div>
+                <div>{rankMode==="personal"?"Añade bares o marca favoritos para verlos aquí":"Sé el primero en añadir uno con el botón +"}</div>
               </div>
             )}
           </div>
@@ -379,7 +407,7 @@ export default function App() {
 
             {/* Feed sub-tabs */}
             <div style={{display:"flex",gap:3,background:"var(--gray-100)",borderRadius:10,padding:3,margin:"10px 12px 0"}}>
-              {[["todo","Todo"],["resenas","Reseñas"],["posts","Posts"],["quedadas","📅"],["stats","📊"]].map(([id,label])=>(
+              {[["todo","Todo"],["resenas","Reseñas"],["posts","Posts"],["quedadas","📅"]].map(([id,label])=>(
                 <button key={id} onClick={()=>setFeedTab(id)} style={{flex:1,padding:"6px 2px",border:"none",borderRadius:8,fontSize:10,fontWeight:600,cursor:"pointer",background:feedTab===id?"var(--paper)":"none",color:feedTab===id?"var(--ink)":"var(--gray-600)",boxShadow:feedTab===id?"0 1px 3px rgba(0,0,0,0.1)":"none",fontFamily:"var(--font-display)"}}>
                   {label}
                 </button>
@@ -424,6 +452,33 @@ export default function App() {
                     </div>
                     {post.image_url&&<img className="feed-img" src={post.image_url} alt=""/>}
                     {post.text&&<div className="feed-body"><div className="feed-text">{post.text}</div></div>}
+
+                    {/* Post comments */}
+                    <div className="comments-wrap">
+                      {(post.post_comentarios||[]).map((c,ci)=>(
+                        <div key={c.id} className="comment-row">
+                          <Avatar profile={c.profiles} size={24} bgIdx={ci+5}/>
+                          <div className="c-body">
+                            <div className="c-user">{c.profiles?.display_name||"Alguien"}</div>
+                            <div className="c-text">{c.text}</div>
+                          </div>
+                          {c.user_id===userId&&<button onClick={()=>deletePostComment(c.id)} style={{background:"none",border:"none",color:"var(--gray-400)",cursor:"pointer",fontSize:12,padding:0,flexShrink:0}}>✕</button>}
+                        </div>
+                      ))}
+                      <div className="add-comment-row">
+                        <Avatar profile={profile} size={24}/>
+                        <input
+                          value={commentInputs[`post-${post.id}`]||""}
+                          onChange={e=>setCommentInputs(p=>({...p,[`post-${post.id}`]:e.target.value}))}
+                          onKeyDown={e=>{ if(e.key==="Enter"){ addPostComment(post.id, commentInputs[`post-${post.id}`]||""); setCommentInputs(p=>({...p,[`post-${post.id}`]:""})) }}}
+                          placeholder="Comenta..."
+                        />
+                        <button className="send-btn" onClick={()=>{ addPostComment(post.id, commentInputs[`post-${post.id}`]||""); setCommentInputs(p=>({...p,[`post-${post.id}`]:""})) }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="feed-actions-row">
                       <button className={`action-btn${post.userLiked?" liked":""}`} onClick={()=>togglePostLike(post.id,post.userLiked)}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill={post.userLiked?"var(--red)":"none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
