@@ -147,7 +147,7 @@ export default function BarDetalleModal({ bar, userId, allProfiles, onClose, onR
 
         {/* Tabs */}
         <div style={{ display:'flex', gap:4, background:'var(--gray-100)', borderRadius:10, padding:3, marginBottom:14 }}>
-          {[['info','ℹ️ Info'],['galeria','📸 Fotos'],['opinion','⭐ Mi opinión'],['debate','💬 Debate']].map(([id,label])=>(
+          {[['info','ℹ️ Info'],['galeria','📸 Fotos'],['opinion','⭐ Mi opinión'],['debate','💬 Comentarios']].map(([id,label])=>(
             <button key={id} onClick={()=>setTab(id)} style={{ flex:1,padding:'7px 2px',border:'none',borderRadius:8,fontSize:10,fontWeight:600,cursor:'pointer',background:tab===id?'var(--paper)':'none',color:tab===id?'var(--ink)':'var(--gray-600)',boxShadow:tab===id?'0 1px 3px rgba(0,0,0,0.1)':'none',fontFamily:'var(--font-display)' }}>
               {label}
             </button>
