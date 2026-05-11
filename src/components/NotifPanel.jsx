@@ -14,7 +14,19 @@ function timeAgo(d) {
   return `hace ${Math.floor(s/86400)}d`
 }
 
-export default function NotifPanel({ notifs, onClose, onMarkRead }) {
+export default function NotifPanel({ notifs, onClose, onMarkRead, onBarClick, bares }) {
+  function handleClick(n) {
+    if (n.bar_id && onBarClick && bares) {
+      const bar = bares.find(b => b.id === n.bar_id)
+      if (bar) {
+        onMarkRead()
+        onBarClick(bar)
+        return
+      }
+    }
+    onClose()
+  }
+
   return (
     <div style={{ position:'fixed', inset:0, zIndex:300, display:'flex', flexDirection:'column', justifyContent:'flex-start' }}>
       <div style={{ position:'absolute', inset:0, background:'rgba(26,25,22,0.4)' }} onClick={onClose} />
@@ -28,7 +40,7 @@ export default function NotifPanel({ notifs, onClose, onMarkRead }) {
             <div style={{ padding:32, textAlign:'center', color:'var(--gray-400)', fontSize:13 }}>Sin notificaciones</div>
           )}
           {notifs.map(n => (
-            <div key={n.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderBottom:'1px solid var(--border)', background: n.read ? 'transparent' : 'var(--amber-light)' }}>
+            <div key={n.id} onClick={() => handleClick(n)} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderBottom:'1px solid var(--border)', background: n.read ? 'transparent' : 'var(--amber-light)', cursor: n.bar_id ? 'pointer' : 'default' }}>
               <div style={{ width:36, height:36, borderRadius:'50%', background:'var(--red)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>
                 {ICONS[n.type] || '🔔'}
               </div>
