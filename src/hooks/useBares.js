@@ -31,11 +31,12 @@ export function useBares(userId) {
       const isFav = bar.favoritos.some(f => f.user_id === userId)
       const userVisited = bar.checkins.some(c => c.user_id === userId)
       const favCount = bar.favoritos.length
+      const checkinCount = bar.checkins?.length || 0
       const isGhost = bar.last_activity_at
         ? (Date.now() - new Date(bar.last_activity_at).getTime()) > 30 * 24 * 60 * 60 * 1000
         : false
 
-      return { ...bar, avgScore, isFav, userVisited, favCount, isGhost, reviewCount: scores.length }
+      return { ...bar, avgScore, isFav, userVisited, favCount, isGhost, reviewCount: scores.length, checkinCount }
     })
 
     // Crown = most favorited
