@@ -25,9 +25,17 @@ export function useNotificaciones(userId) {
 
   useEffect(() => {
     fetch()
+    if (!userId) return
     const channel = supabase
-      .channel('notifs-' + userId)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notificaciones', filter: `user_id=eq.${userId}` }, fetch)
+      .channel(`notifs-${userId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notificaciones',
+      }, (payload) => {
+        // Only refetch if this notification is for us
+        if (payload.new?.user_id === userId) fetch()
+      })
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [fetch, userId])
